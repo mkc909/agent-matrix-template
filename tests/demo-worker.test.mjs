@@ -29,7 +29,7 @@ const FORBIDDEN_PRIVATE_PATTERNS = [
 ];
 
 test('zero private identifiers appear anywhere in agent-matrix-template source or outputs', async () => {
-  const files = ['index.html', 'src/worker.js', 'src/ui-html.js', 'QUICK-GUIDE.md', 'wrangler.jsonc'];
+  const files = ['index.html', 'src/worker.js', 'src/ui-html.js', 'QUICK-GUIDE.md', 'README.md', 'wrangler.jsonc'];
   for (const rel of files) {
     const content = fs.readFileSync(path.join(ROOT, rel), 'utf8');
     for (const rx of FORBIDDEN_PRIVATE_PATTERNS) {
