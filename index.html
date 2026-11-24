@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AGENT MATRIX // Simulated Fleet Trace Template</title>
+<style>
+  :root {
+    --mx-bg: #010402;
+    --mx-panel: rgba(2, 12, 6, 0.84);
+    --mx-border: rgba(0, 255, 102, 0.24);
+    --mx-border-strong: rgba(0, 255, 102, 0.54);
+    --mx-green: #00ff66;
+    --mx-cyan: #00e5ff;
+    --mx-gold: #ffd166;
+    --mx-crimson: #ff3b5c;
+    --mx-text: #d7ffe6;
+    --mx-muted: #6aa881;
+    --mx-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--mx-bg);
+    color: var(--mx-text);
+    font-family: var(--mx-mono);
+    user-select: none;
+  }
+  .mx-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 35%, rgba(0, 72, 30, 0.22) 0%, rgba(1, 5, 3, 0.94) 70%, #010302 100%);
+  }
+  canvas#mx-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+  .mx-crt {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0, 255, 102, 0.025) 0px,
+        rgba(0, 255, 102, 0.025) 1px,
+        transparent 1px,
+        transparent 3px
+      ),
+      radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.72) 100%);
+    z-index: 2;
+  }
+  .mx-top {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--mx-panel);
+    border: 1px solid var(--mx-border);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+    z-index: 5;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .mx-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--mx-green);
+    text-shadow: 0 0 10px rgba(0, 255, 102, 0.45);
+  }
+  .mx-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mx-cyan);
+    box-shadow: 0 0 10px var(--mx-cyan);
+    animation: mx-pulse 1.8s infinite ease-in-out;
+  }
+  @keyframes mx-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.8); }
+  }
+  .mx-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+  }
+  .mx-stat {
+    padding: 3px 7px;
+    border: 1px solid rgba(0, 255, 102, 0.18);
+    border-radius: 4px;
+    background: rgba(0, 24, 10, 0.65);
+    color: var(--mx-muted);
+    white-space: nowrap;
+  }
+  .mx-stat strong { color: var(--mx-text); font-weight: 700; }
+  .mx-stat--cyan strong { color: var(--mx-cyan); }
+  .mx-stat--gold strong { color: var(--mx-gold); }
+  .mx-stat--crimson strong { color: var(--mx-crimson); }
+
+  .mx-hover-tip {
+    position: absolute;
+    pointer-events: none;
+    z-index: 6;
+    display: none;
+    padding: 5px 9px;
+    border-radius: 4px;
+    background: rgba(2, 14, 7, 0.92);
+    border: 1px solid var(--mx-border-strong);
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.2);
+    font-size: 11px;
+    line-height: 1.35;
+    max-width: 280px;
+  }
+  .mx-hover-tip .k { font-size: 9.5px; letter-spacing: 0.1em; color: var(--mx-muted); }
+  .mx-hover-tip .t { color: var(--mx-text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .mx-dock {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--mx-panel);
+    border: 1px solid var(--mx-border);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+    z-index: 5;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .mx-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .mx-btn {
+    appearance: none;
+    border: 1px solid var(--mx-border);
+    background: rgba(2, 20, 9, 0.78);
+    color: var(--mx-text);
+    font-family: var(--mx-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .mx-btn:hover { border-color: var(--mx-green); color: var(--mx-green); }
+  .mx-btn.is-on {
+    border-color: var(--mx-green);
+    background: rgba(0, 255, 102, 0.14);
+    color: var(--mx-green);
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.22);
+  }
+  .mx-btn.is-cyan { border-color: rgba(0, 229, 255, 0.45); color: var(--mx-cyan); }
+  .mx-btn.is-cyan:hover { border-color: var(--mx-cyan); background: rgba(0, 229, 255, 0.14); }
+  .mx-btn.is-gold.is-on {
+    border-color: var(--mx-gold);
+    background: rgba(255, 209, 102, 0.15);
+    color: var(--mx-gold);
+  }
+  .mx-btn.is-crimson.is-on {
+    border-color: var(--mx-crimson);
+    background: rgba(255, 59, 92, 0.16);
+    color: var(--mx-crimson);
+  }
+  .mx-slider-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    color: var(--mx-muted);
+    padding: 2px 6px;
+    border: 1px solid rgba(0, 255, 102, 0.15);
+    border-radius: 4px;
+  }
+  .mx-slider-wrap input[type="range"] { width: 72px; accent-color: var(--mx-green); cursor: pointer; }
+  .mx-search {
+    background: rgba(1, 12, 5, 0.9);
+    border: 1px solid var(--mx-border);
+    color: var(--mx-text);
+    font-family: var(--mx-mono);
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    width: 138px;
+    outline: none;
+  }
+  .mx-search:focus { border-color: var(--mx-green); box-shadow: 0 0 8px rgba(0, 255, 102, 0.28); }
+
+  .mx-zen-restore {
+    position: absolute; right: 12px; bottom: 12px; z-index: 8; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .mx-stage.is-zen .mx-top, .mx-stage.is-zen .mx-dock {
+    opacity: 0; pointer-events: none; transform: translateY(6px);
+  }
+  .mx-stage.is-zen .mx-zen-restore { opacity: 0.45; pointer-events: auto; }
+  .mx-stage.is-zen .mx-zen-restore:hover { opacity: 1; }
+
+  .mx-drawer {
+    position: absolute;
+    top: 60px; right: 12px; bottom: 66px;
+    width: min(390px, calc(100% - 24px));
+    background: rgba(2, 13, 6, 0.94);
+    border: 1px solid var(--mx-border-strong);
+    border-radius: 6px;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.75), 0 0 24px rgba(0, 255, 102, 0.14);
+    backdrop-filter: blur(10px);
+    z-index: 7;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(calc(100% + 24px));
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    user-select: text;
+  }
+  .mx-drawer.is-open { transform: translateX(0); }
+  .mx-drawer-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    padding: 10px 12px; border-bottom: 1px solid rgba(0, 255, 102, 0.2);
+  }
+  .mx-badge {
+    display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em;
+    padding: 2px 6px; border-radius: 3px; border: 1px solid currentColor; margin-bottom: 4px;
+  }
+  .sig-emerald { color: var(--mx-green); }
+  .sig-cyan { color: var(--mx-cyan); }
+  .sig-gold { color: var(--mx-gold); }
+  .sig-crimson { color: var(--mx-crimson); }
+  .mx-drawer-title { margin: 0; font-size: 12.5px; line-height: 1.35; color: var(--mx-text); }
+  .mx-drawer-body { flex: 1; overflow-y: auto; padding: 10px 12px; font-size: 11px; line-height: 1.5; }
+  .mx-kv {
+    display: grid; grid-template-columns: 92px 1fr; gap: 4px 8px;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed rgba(0, 255, 102, 0.16);
+  }
+  .mx-kv dt { color: var(--mx-muted); }
+  .mx-kv dd { margin: 0; color: var(--mx-text); word-break: break-word; }
+  .mx-summary {
+    background: rgba(0, 20, 9, 0.72); border-left: 2px solid var(--mx-green);
+    padding: 7px 9px; margin-bottom: 10px; color: #c8f7d9; white-space: pre-wrap; word-break: break-word;
+  }
+  .mx-spans { margin-bottom: 10px; }
+  .mx-span-row { margin-bottom: 6px; }
+  .mx-span-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--mx-muted); margin-bottom: 2px; }
+  .mx-span-bar { height: 5px; border-radius: 3px; background: rgba(0, 255, 102, 0.12); overflow: hidden; }
+  .mx-span-fill { height: 100%; background: linear-gradient(90deg, #009940, #00ff66); }
+  .mx-refs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .mx-ref-chip {
+    font-size: 10px; padding: 2px 6px; border-radius: 3px;
+    background: rgba(0, 255, 102, 0.08); border: 1px solid rgba(0, 255, 102, 0.25);
+    color: var(--mx-green); cursor: pointer;
+  }
+  .mx-ref-chip:hover { background: rgba(0, 255, 102, 0.2); }
+  .mx-json-box {
+    background: #010804; border: 1px solid rgba(0, 255, 102, 0.2); border-radius: 4px;
+    padding: 8px; font-size: 10px; overflow-x: auto; color: #9ce6b8; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* Quick Guide Overlay Modal */
+  .mx-guide-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(1, 5, 3, 0.76);
+    backdrop-filter: blur(5px);
+    z-index: 12;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .mx-guide-backdrop.is-open { display: flex; }
+  .mx-guide {
+    width: min(680px, 100%);
+    max-height: calc(100% - 20px);
+    overflow-y: auto;
+    background: rgba(2, 14, 7, 0.96);
+    border: 1px solid var(--mx-border-strong);
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(0, 255, 102, 0.16);
+    padding: 16px;
+    user-select: text;
+  }
+  .mx-guide-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding-bottom: 10px; border-bottom: 1px solid rgba(0, 255, 102, 0.2); margin-bottom: 12px;
+  }
+  .mx-guide-head h1 {
+    margin: 0; font-size: 14px; letter-spacing: 0.12em; color: var(--mx-green);
+    text-shadow: 0 0 10px rgba(0, 255, 102, 0.35);
+  }
+  .mx-guide-sub { margin: 0 0 12px; font-size: 11px; line-height: 1.5; color: #b7f5cf; }
+  .mx-guide-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 14px;
+  }
+  .mx-guide-card {
+    background: rgba(0, 24, 10, 0.65); border: 1px solid rgba(0, 255, 102, 0.2);
+    border-radius: 6px; padding: 10px; font-size: 10.5px; line-height: 1.5;
+  }
+  .mx-guide-card h3 {
+    margin: 0 0 6px; font-size: 11px; letter-spacing: 0.08em; color: var(--mx-cyan);
+  }
+  .mx-guide-card p { margin: 0; color: #bfead0; }
+  .mx-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .mx-legend span { font-size: 9.5px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 3px; }
+  .mx-guide-actions {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .mx-btn-primary {
+    border-color: var(--mx-green);
+    background: rgba(0, 255, 102, 0.18);
+    color: var(--mx-green);
+    font-weight: 700;
+    padding: 7px 14px;
+    box-shadow: 0 0 14px rgba(0, 255, 102, 0.24);
+  }
+  @media (max-width: 640px) {
+    .mx-search { width: 108px; }
+    .mx-slider-wrap input[type="range"] { width: 52px; }
+    .mx-top { top: 8px; left: 8px; right: 8px; padding: 6px 8px; }
+    .mx-dock { left: 8px; right: 8px; bottom: 8px; padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="mx-stage" id="mx-stage">
+  <canvas id="mx-canvas"></canvas>
+  <div class="mx-crt"></div>
+
+  <header class="mx-top">
+    <div class="mx-brand">
+      <span class="mx-dot" id="mx-live-dot"></span>
+      <span>AGENT MATRIX // NEXUS SIM</span>
+    </div>
+    <div class="mx-stats">
+      <span class="mx-stat">STREAMS <strong id="st-total">0</strong></span>
+      <span class="mx-stat mx-stat--cyan">ACTIVE <strong id="st-active">0</strong></span>
+      <span class="mx-stat">TRACES <strong id="st-traces">0</strong></span>
+      <span class="mx-stat mx-stat--gold">DECISIONS <strong id="st-decisions">0</strong></span>
+      <span class="mx-stat mx-stat--crimson">ALERTS <strong id="st-alerts">0</strong></span>
+      <span class="mx-stat" id="st-mode">SIM LIVE</span>
+      <button type="button" class="mx-btn is-cyan" id="btn-guide">GUIDE [?]</button>
+    </div>
+  </header>
+
+  <div class="mx-hover-tip" id="mx-hover-tip">
+    <div class="k" id="ht-kind">AGENT</div>
+    <div class="t" id="ht-title">Loading…</div>
+  </div>
+
+  <aside class="mx-drawer" id="mx-drawer" aria-hidden="true">
+    <div class="mx-drawer-head">
+      <div>
+        <span class="mx-badge sig-emerald" id="dr-kind">STREAM</span>
+        <h2 class="mx-drawer-title" id="dr-title">Select a falling stream</h2>
+      </div>
+      <button type="button" class="mx-btn" id="dr-close" title="Close (Esc)">ESC</button>
+    </div>
+    <div class="mx-drawer-body">
+      <dl class="mx-kv">
+        <dt>STATUS</dt><dd id="dr-status">—</dd>
+        <dt>HOST</dt><dd id="dr-host">—</dd>
+        <dt>RUNTIME</dt><dd id="dr-model">—</dd>
+        <dt>TIMESTAMP</dt><dd id="dr-time">—</dd>
+        <dt>DURATION</dt><dd id="dr-dur">—</dd>
+      </dl>
+      <div class="mx-summary" id="dr-summary">Click any falling column to inspect simulated agent traces.</div>
+      <div class="mx-spans" id="dr-spans"></div>
+      <div class="mx-refs" id="dr-refs"></div>
+      <button type="button" class="mx-btn" id="dr-raw-toggle">RAW JSON SCHEMA</button>
+      <pre class="mx-json-box" id="dr-raw" style="display:none;margin-top:8px;"></pre>
+    </div>
+  </aside>
+
+  <div class="mx-guide-backdrop is-open" id="mx-guide" role="dialog" aria-modal="true" aria-label="Agent Matrix Quick Guide">
+    <div class="mx-guide">
+      <div class="mx-guide-head">
+        <h1>AGENT MATRIX // QUICK GUIDE (SIMULATED FLEET TEMPLATE)</h1>
+        <button type="button" class="mx-btn" id="btn-guide-x">ESC</button>
+      </div>
+      <p class="mx-guide-sub">
+        You are looking at a <strong>100% synthetic multi-agent fleet simulation</strong> ("Nexus Fleet"). Every falling column represents a live agent worker, tool trace, governance decision, or anomaly cascade. Zero private data is connected here — click <strong>+ SIM EVENT</strong> or any stream to explore, or copy the JSON schema to plug in your own agents.
+      </p>
+      <div class="mx-guide-grid">
+        <div class="mx-guide-card">
+          <h3>1. READ THE MATRIX SIGNALS</h3>
+          <p>Katakana ambient streams mix with live telemetry tokens pulled from each trace object.</p>
+          <div class="mx-legend">
+            <span class="sig-emerald">EMERALD · HEALTHY / OK</span>
+            <span class="sig-cyan">CYAN · ACTIVE WORK</span>
+            <span class="sig-gold">GOLD · GOVERNANCE</span>
+            <span class="sig-crimson">CRIMSON · ALERT</span>
+          </div>
+        </div>
+        <div class="mx-guide-card">
+          <h3>2. BULLET-TIME &amp; DECRYPT</h3>
+          <p>Press <strong>Space</strong> to slow rain to <code>0.15x</code> or freeze time. Click any falling column (or search with <code>/</code>) to lock a spotlight beam and inspect spans &amp; JSON.</p>
+        </div>
+        <div class="mx-guide-card">
+          <h3>3. NEURAL PULSE &amp; SIMULATOR</h3>
+          <p>Press <strong>P</strong> to render dependency arcs connecting Orchestrator → Builders → QA Verifier. Hit <strong>+ SIM EVENT</strong> to fire a live synthetic multi-agent trace.</p>
+        </div>
+        <div class="mx-guide-card">
+          <h3>4. ADAPT AS YOUR TEMPLATE</h3>
+          <p>Feed your own endpoint returning <code>{ streams: [...], edges: [...] }</code>. See <code>/api/schema</code> or copy the starter payload below.</p>
+        </div>
+      </div>
+      <div class="mx-guide-actions">
+        <div class="mx-group">
+          <button type="button" class="mx-btn is-cyan" id="btn-copy-tpl">COPY JSON TEMPLATE</button>
+          <a class="mx-btn" href="/api/schema" target="_blank" rel="noopener" style="text-decoration:none;">VIEW /api/schema</a>
+        </div>
+        <button type="button" class="mx-btn mx-btn-primary" id="btn-enter-matrix">ENTER THE MATRIX</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="mx-dock">
+    <div class="mx-group">
+      <button type="button" class="mx-btn is-on" id="btn-speed">SPEED 1.0x [Space]</button>
+      <label class="mx-slider-wrap">
+        <span>DECODE <strong id="lbl-decode">60%</strong></span>
+        <input type="range" id="rng-decode" min="0" max="100" value="60" />
+      </label>
+      <button type="button" class="mx-btn" id="btn-pulse">PULSE [P]</button>
+      <button type="button" class="mx-btn is-cyan" id="btn-sim">+ SIM EVENT</button>
+    </div>
+    <div class="mx-group" id="filter-group">
+      <button type="button" class="mx-btn is-on" data-filter="ALL">ALL</button>
+      <button type="button" class="mx-btn" data-filter="AGENT">AGENTS</button>
+      <button type="button" class="mx-btn" data-filter="TRACE">TRACES</button>
+      <button type="button" class="mx-btn is-gold" data-filter="DECISION">DECISIONS</button>
+      <button type="button" class="mx-btn is-crimson" data-filter="ALERTS">ALERTS</button>
+    </div>
+    <div class="mx-group">
+      <input type="search" class="mx-search" id="inp-search" placeholder="/ lock trace…" />
+      <button type="button" class="mx-btn" id="btn-audio">AUDIO OFF [M]</button>
+      <button type="button" class="mx-btn" id="btn-zen">ZEN [H]</button>
+    </div>
+  </footer>
+
+  <button type="button" class="mx-btn mx-zen-restore" id="btn-zen-exit">HUD [H]</button>
+</div>
+
+<script>
+(function () {
+  const KATA = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789ABCDEF<>+*=:#/';
+  const COLORS = {
+    emerald: { main: '#00ff66', mid: '#009e40', tail: '#043819', head: '#eafff1' },
+    cyan:    { main: '#00e5ff', mid: '#0095b3', tail: '#033642', head: '#ebfcff' },
+    gold:    { main: '#ffd166', mid: '#b88922', tail: '#3d2c07', head: '#fff9e6' },
+    crimson: { main: '#ff3b5c', mid: '#a81e37', tail: '#3d0812', head: '#ffe8ec' },
+  };
+
+  function nowIso() {
+    return new Date().toISOString().replace('T', ' ').slice(0, 19) + 'Z';
+  }
+
+  const SIM_SEED = {
+    streams: [
+      { id: 'sim:orch-01', kind: 'AGENT', subkind: 'ORCHESTRATOR', label: 'ORCHESTRATOR-01', title: 'Orchestrator — Nexus Fleet Control Plane', status: 'running', signal: 'cyan', host: 'edge-us-east', model: 'planner-v4', timestamp: nowIso(), durationMs: null, summary: 'Coordinating 5 domain deputies and 1 active feature squad across synthetic clusters.', refs: ['sim:dep-platform', 'sim:dep-security', 'sim:squad-arch'], tokens: ['ORCH-01', 'PLANNER-V4', 'EDGE-EAST', 'DISPATCH'], spans: [{ name: 'fleet-loop', status: 'running', pct: 0.82 }, { name: 'policy-sync', status: 'verified', pct: 0.96 }] },
+      { id: 'sim:dep-platform', kind: 'AGENT', subkind: 'DEPUTY', label: 'DEPUTY-PLATFORM', title: 'Deputy Platform — Edge Routing & Storage', status: 'running', signal: 'cyan', host: 'node-alpha-02', model: 'codex-pro', timestamp: nowIso(), durationMs: null, summary: 'Overseeing zero-downtime KV + D1 additive schema rollouts across edge workers.', refs: ['sim:trace-migrate', 'sim:squad-api'], tokens: ['DEP-PLATFORM', 'CODEX-PRO', 'ADDITIVE-DDL'], spans: [{ name: 'schema-guard', status: 'running', pct: 0.7 }] },
+      { id: 'sim:dep-security', kind: 'AGENT', subkind: 'DEPUTY', label: 'DEPUTY-SECURITY', title: 'Deputy Security — Zero Trust & TLS Hygiene', status: 'running', signal: 'emerald', host: 'node-bravo-01', model: 'sentinel-4', timestamp: nowIso(), durationMs: null, summary: 'Auditing mTLS boundaries, JWT key rotation, and HSTS enforcement across edge routes.', refs: ['sim:alert-tls', 'sim:trace-jwks'], tokens: ['SEC-AUDIT', 'MTLS', 'JWKS-OK'], spans: [{ name: 'zero-trust-scan', status: 'completed', pct: 0.94 }] },
+      { id: 'sim:dep-finance', kind: 'AGENT', subkind: 'DEPUTY', label: 'DEPUTY-LEDGER', title: 'Deputy Ledger — Token Cost & Quorum Accounting', status: 'completed', signal: 'emerald', host: 'node-charlie-03', model: 'analyst-v3', timestamp: nowIso(), durationMs: null, summary: 'Verified per-agent compute spend within daily sandbox threshold ($4.18 / $25.00).', refs: ['sim:dec-budget'], tokens: ['FINOPS-SIM', 'QUOTA-OK', '$4.18'], spans: [{ name: 'cost-rollup', status: 'completed', pct: 1.0 }] },
+      { id: 'sim:dep-qa', kind: 'AGENT', subkind: 'DEPUTY', label: 'DEPUTY-QA', title: 'Deputy QA — Cross-Family Rule Zero Enforcer', status: 'running', signal: 'cyan', host: 'node-delta-01', model: 'judge-flash', timestamp: nowIso(), durationMs: null, summary: 'Enforcing independent verifier separation before any PR enters canary deployment.', refs: ['sim:squad-qa', 'sim:trace-playwright'], tokens: ['RULE-ZERO', 'NO-SELF-GRADE', 'PLAYWRIGHT'], spans: [{ name: 'gate-eval', status: 'running', pct: 0.65 }] },
+      { id: 'sim:squad-arch', kind: 'AGENT', subkind: 'SQUAD', label: 'SQUAD-ARCHITECT', title: 'Squad Architect — Event Contract & UI Spec', status: 'completed', signal: 'emerald', host: 'worktree-01', model: 'design-neon', timestamp: nowIso(), durationMs: 14200, summary: 'Locked shared SSE event contract and CRT viewport tokens for Squad builders.', refs: ['sim:squad-api', 'sim:squad-ui'], tokens: ['SPEC-LOCKED', 'SSE-CONTRACT', 'CRT-TOKENS'], spans: [{ name: 'contract.json', status: 'completed', pct: 1.0 }] },
+      { id: 'sim:squad-api', kind: 'AGENT', subkind: 'SQUAD', label: 'SQUAD-API', title: 'Squad Backend — Streaming Relay & Worker APIs', status: 'working', signal: 'cyan', host: 'worktree-02', model: 'builder-sol', timestamp: nowIso(), durationMs: null, summary: 'Streaming normalized spans from synthetic MCP trace cursor into edge cache.', refs: ['sim:trace-relay', 'sim:squad-qa'], tokens: ['STREAM-RELAY', 'SSE-PUSH', 'BUILDER-SOL'], spans: [{ name: 'relay.mjs', status: 'working', pct: 0.78 }] },
+      { id: 'sim:squad-ui', kind: 'AGENT', subkind: 'SQUAD', label: 'SQUAD-UI', title: 'Squad Frontend — Parallax Matrix Rain Renderer', status: 'working', signal: 'cyan', host: 'worktree-03', model: 'builder-sol', timestamp: nowIso(), durationMs: null, summary: 'Rendering 3-depth katakana + decoded trace columns with zero-dependency canvas.', refs: ['sim:squad-qa'], tokens: ['CANVAS-2D', '60FPS', 'BULLET-TIME'], spans: [{ name: 'matrix-canvas', status: 'working', pct: 0.85 }] },
+      { id: 'sim:squad-qa', kind: 'AGENT', subkind: 'SQUAD', label: 'SQUAD-VERIFIER', title: 'Squad QA — Synthetic Browser E2E Harness', status: 'running', signal: 'emerald', host: 'sandbox-ci', model: 'judge-flash', timestamp: nowIso(), durationMs: null, summary: 'Verifying desktop 1440x900 & mobile 390x844 canvas pixel density and 0 console errors.', refs: ['sim:trace-playwright'], tokens: ['CHROMIUM-E2E', 'DESKTOP+MOBILE', '0-ERRORS'], spans: [{ name: 'browser-proof', status: 'running', pct: 0.62 }] },
+      { id: 'sim:trace-deploy', kind: 'TRACE', subkind: 'EDGE-DEPLOY', label: 'DEPLOY-WORKER', title: 'deploy-edge-worker (nexus-gateway)', status: 'completed', signal: 'emerald', host: 'nexus-gateway', model: 'ci-runner-04', timestamp: nowIso(), durationMs: 138, summary: 'Bundled ES module worker and verified /health commit SHA parity in 138ms.', refs: ['sha:a94f11c', 'sim:dep-platform'], tokens: ['DEPLOY', '138MS', 'SHA-BOUND', 'HTTP-200'], spans: [{ name: 'bundle', status: 'completed', pct: 0.35 }, { name: 'edge-prop', status: 'completed', pct: 0.95 }] },
+      { id: 'sim:trace-jwks', kind: 'TRACE', subkind: 'AUTH-JWKS', label: 'VERIFY-JWT', title: 'verify-access-jwt (zero-trust-gate)', status: 'completed', signal: 'emerald', host: 'zero-trust-gate', model: 'crypto-web', timestamp: nowIso(), durationMs: 11, summary: 'Validated RS256 Access assertion against edge JWKS cache in 11ms (fail-closed).', refs: ['sim:dep-security'], tokens: ['RS256', '11MS', 'FAIL-CLOSED'], spans: [{ name: 'jwks-verify', status: 'completed', pct: 0.9 }] },
+      { id: 'sim:trace-migrate', kind: 'TRACE', subkind: 'MIGRATION', label: 'SCHEMA-GUARD', title: 'schema-drift-check (nexus-db)', status: 'completed', signal: 'emerald', host: 'nexus-db', model: 'ddl-linter', timestamp: nowIso(), durationMs: 42, summary: 'Confirmed additive-only migration (0 destructive DROP/ALTER statements).', refs: ['sim:dep-platform'], tokens: ['ADDITIVE-SQL', '42MS', 'NO-DROP'], spans: [{ name: 'ast-lint', status: 'completed', pct: 0.88 }] },
+      { id: 'sim:trace-relay', kind: 'TRACE', subkind: 'MCP-RELAY', label: 'MCP-TRACE-RELAY', title: 'mcp-trace-relay (cursor-poller)', status: 'running', signal: 'cyan', host: 'relay-node', model: 'stream-v2', timestamp: nowIso(), durationMs: 27, summary: 'Streaming tool call frames & parent-child subagent links via SSE cursor.', refs: ['sim:squad-api'], tokens: ['SSE-FRAME', '27MS', 'CAUSAL-SPAN'], spans: [{ name: 'cursor-poll', status: 'running', pct: 0.72 }] },
+      { id: 'sim:trace-playwright', kind: 'TRACE', subkind: 'BROWSER-QA', label: 'PLAYWRIGHT-QA', title: 'playwright-smoke (desktop+mobile)', status: 'completed', signal: 'emerald', host: 'ci-browser', model: 'chromium-132', timestamp: nowIso(), durationMs: 1840, summary: 'Zero pageerrors, zero failed network fetches across 1440x900 & 390x844 viewports.', refs: ['sim:squad-qa', 'sim:dep-qa'], tokens: ['1840MS', 'ZERO-ERR', 'VIEWPORTS'], spans: [{ name: 'desktop', status: 'completed', pct: 0.5 }, { name: 'mobile', status: 'completed', pct: 0.95 }] },
+      { id: 'sim:trace-vector', kind: 'TRACE', subkind: 'RAG-INDEX', label: 'EMBED-TRACE', title: 'vector-trace-index (semantic-memory)', status: 'completed', signal: 'emerald', host: 'ai-index', model: 'bge-large', timestamp: nowIso(), durationMs: 64, summary: 'Indexed latest execution trace spans for historical precedent matching.', refs: ['sim:dec-precedent'], tokens: ['1024-DIM', '64MS', 'UPSERT'], spans: [{ name: 'embed', status: 'completed', pct: 0.9 }] },
+      { id: 'sim:dec-precedent', kind: 'DECISION', subkind: 'C2/A2', label: 'DEC-QUORUM', title: 'C2/A2: Require Cross-Family QA Review on Edge Deploys', status: 'enacted', signal: 'gold', host: 'governance-dag', model: 'weighted-rubric', timestamp: nowIso(), durationMs: null, summary: 'Enacted policy requiring distinct model families for code authoring vs release sign-off.', refs: ['sim:dep-qa', 'sim:squad-qa'], tokens: ['C2/A2', 'ENACTED', 'CROSS-FAMILY'], spans: [{ name: 'precedent-dag', status: 'enacted', pct: 0.95 }] },
+      { id: 'sim:dec-budget', kind: 'DECISION', subkind: 'C3/A3', label: 'DEC-SPEND-GATE', title: 'C3/A3: Auto-Hold New Cloud Regions Above $50/mo', status: 'enacted', signal: 'gold', host: 'governance-dag', model: 'spend-tree-v1', timestamp: nowIso(), durationMs: null, summary: 'Human owner gate triggered only above budget threshold; maintenance stays autonomous.', refs: ['sim:dep-finance'], tokens: ['C3/A3', 'BUDGET-CAP', 'AUTONOMOUS'], spans: [{ name: 'policy-check', status: 'enacted', pct: 1.0 }] },
+      { id: 'sim:dec-zero-trust', kind: 'DECISION', subkind: 'C2/A2', label: 'DEC-ACCESS-EDGE', title: 'C2/A2: Disable Direct Subdomain Backdoors Under Access', status: 'enacted', signal: 'gold', host: 'governance-dag', model: 'security-tree', timestamp: nowIso(), durationMs: null, summary: 'Require RS256 origin verification plus explicit custom-domain routing.', refs: ['sim:dep-security', 'sim:trace-jwks'], tokens: ['ZERO-TRUST', 'NO-BACKDOOR', 'RS256'], spans: [{ name: 'edge-policy', status: 'enacted', pct: 0.92 }] },
+      { id: 'sim:alert-quota', kind: 'TRACE', subkind: 'FAILOVER-ALERT', label: 'ALERT:QUOTA', title: 'ALERT: Worker Pool B Hit Soft Rate Limit (Auto-Failover)', status: 'failed', signal: 'crimson', host: 'router-edge', model: 'circuit-breaker', timestamp: nowIso(), durationMs: 312, summary: 'Detected 429 burst on synthetic Pool B; circuit breaker tripped and re-routed traffic in 312ms.', refs: ['sim:orch-01', 'sim:dep-qa'], tokens: ['ALERT', 'HTTP-429', 'FAILOVER', '312MS'], spans: [{ name: 'circuit-trip', status: 'failed', pct: 0.9 }] },
+      { id: 'sim:alert-tls', kind: 'TRACE', subkind: 'DRIFT-ALERT', label: 'ALERT:TLS-DRIFT', title: 'ALERT: Staging Edge Endpoint Missing Min-TLS 1.2 Floor', status: 'blocked', signal: 'crimson', host: 'edge-auditor', model: 'policy-bot', timestamp: nowIso(), durationMs: 48, summary: 'Blocked promotion on synthetic zone beta-07 until strict TLS 1.2+ floor is restored.', refs: ['sim:dep-security'], tokens: ['ALERT', 'TLS-FLOOR', 'BLOCKED'], spans: [{ name: 'tls-probe', status: 'blocked', pct: 0.78 }] },
+      { id: 'sim:alert-schema', kind: 'TRACE', subkind: 'SCHEMA-ALERT', label: 'ALERT:DIFF-HOLD', title: 'ALERT: Destructive Column Rename Rejected Pre-Merge', status: 'blocked', signal: 'crimson', host: 'nexus-db', model: 'ddl-linter', timestamp: nowIso(), durationMs: 19, summary: 'AST check blocked unsafe ALTER statement before staging deploy; rewrite requested.', refs: ['sim:dep-platform', 'sim:trace-migrate'], tokens: ['ALERT', 'DDL-GUARD', 'BLOCKED'], spans: [{ name: 'ast-check', status: 'blocked', pct: 0.95 }] },
+    ],
+    edges: [
+      { from: 'sim:orch-01', to: 'sim:dep-platform', kind: 'oversees' },
+      { from: 'sim:orch-01', to: 'sim:dep-security', kind: 'oversees' },
+      { from: 'sim:orch-01', to: 'sim:dep-finance', kind: 'oversees' },
+      { from: 'sim:orch-01', to: 'sim:dep-qa', kind: 'oversees' },
+      { from: 'sim:dep-platform', to: 'sim:squad-arch', kind: 'oversees' },
+      { from: 'sim:squad-arch', to: 'sim:squad-api', kind: 'handoff' },
+      { from: 'sim:squad-arch', to: 'sim:squad-ui', kind: 'handoff' },
+      { from: 'sim:squad-api', to: 'sim:squad-qa', kind: 'handoff' },
+      { from: 'sim:squad-ui', to: 'sim:squad-qa', kind: 'handoff' },
+      { from: 'sim:dep-qa', to: 'sim:squad-qa', kind: 'verifies' },
+      { from: 'sim:squad-api', to: 'sim:trace-relay', kind: 'emits' },
+      { from: 'sim:squad-qa', to: 'sim:trace-playwright', kind: 'emits' },
+      { from: 'sim:dep-security', to: 'sim:trace-jwks', kind: 'emits' },
+      { from: 'sim:dep-security', to: 'sim:alert-tls', kind: 'catches' },
+      { from: 'sim:dep-platform', to: 'sim:alert-schema', kind: 'catches' },
+      { from: 'sim:dec-precedent', to: 'sim:dep-qa', kind: 'governs' },
+      { from: 'sim:dec-budget', to: 'sim:dep-finance', kind: 'governs' },
+      { from: 'sim:dec-zero-trust', to: 'sim:dep-security', kind: 'governs' },
+    ],
+  };
+
+  const TEMPLATE_STARTER = {
+    sourceMode: 'custom-agent-adapter',
+    stats: { totalStreams: 3, activeAgents: 1, traces: 1, decisions: 1, alerts: 0, edges: 2 },
+    streams: [
+      { id: 'agent:planner-1', kind: 'AGENT', subkind: 'PLANNER', label: 'PLANNER-01', title: 'Planner Agent — Release Coordinator', status: 'running', signal: 'cyan', host: 'worker-01', model: 'model-a', timestamp: '2026-11-23T19:30:00Z', summary: 'Dispatching build & verification tasks.', refs: ['trace:build-42'], tokens: ['PLANNER', 'RUNNING', 'WORKER-01'], spans: [{ name: 'dispatch', status: 'running', pct: 0.7 }] },
+      { id: 'trace:build-42', kind: 'TRACE', subkind: 'CI-RUN', label: 'BUILD-42', title: 'run-unit-tests (app-api)', status: 'completed', signal: 'emerald', host: 'app-api', model: 'ci-bot', timestamp: '2026-11-23T19:30:04Z', durationMs: 245, summary: 'Passed 24/24 tests cleanly.', refs: ['agent:planner-1'], tokens: ['PASS', '245MS', '24/24'], spans: [{ name: 'test', status: 'completed', pct: 1.0 }] },
+      { id: 'dec:ship-42', kind: 'DECISION', subkind: 'C2/A2', label: 'SHIP-GATE', title: 'Approve Canary Promotion', status: 'enacted', signal: 'gold', host: 'governance', model: 'policy-v1', timestamp: '2026-11-23T19:30:05Z', summary: 'Promoted canary after independent checks passed.', refs: ['trace:build-42'], tokens: ['ENACTED', 'CANARY'], spans: [{ name: 'approve', status: 'enacted', pct: 0.95 }] }
+    ],
+    edges: [
+      { from: 'agent:planner-1', to: 'trace:build-42', kind: 'emits' },
+      { from: 'dec:ship-42', to: 'trace:build-42', kind: 'governs' }
+    ]
+  };
+
+  const SIM_POOL = [
+    { kind: 'TRACE', subkind: 'SPAN', label: 'CACHE-WARM', title: 'edge-kv-warm (us-west-pop)', status: 'completed', signal: 'emerald', host: 'edge-west', model: 'cache-bot', ms: 31, summary: 'Pre-warmed 48 trace index manifests across western edge POPs.', tokens: ['KV-WARM', '31MS', '48-KEYS'] },
+    { kind: 'TRACE', subkind: 'TOOL-CALL', label: 'TOOL:AST-SCAN', title: 'static-secret-lint (repo-check)', status: 'completed', signal: 'emerald', host: 'sandbox-ci', model: 'guard-cli', ms: 54, summary: 'Zero credential patterns detected across 112 tracked diffs.', tokens: ['ZERO-LEAKS', '54MS', 'PASS'] },
+    { kind: 'AGENT', subkind: 'SUBAGENT', label: 'SUBAGENT-DIFF', title: 'Subagent Critic — Latency Regression Audit', status: 'running', signal: 'cyan', host: 'node-alpha-02', model: 'critic-v2', ms: null, summary: 'Comparing p95 trace durations before and after streaming batch patch.', tokens: ['CRITIC-V2', 'P95-AUDIT', 'RUNNING'] },
+    { kind: 'DECISION', subkind: 'C2/A2', label: 'DEC-AUTO-HEAL', title: 'C2/A2: Auto-Rotate Stale Edge Relay Cursor', status: 'enacted', signal: 'gold', host: 'governance-dag', model: 'heal-policy', ms: null, summary: 'Automatically reset lagging cursor shard without interrupting active SSE clients.', tokens: ['AUTO-HEAL', 'ENACTED', 'CURSOR'] },
+    { kind: 'TRACE', subkind: 'ALERT', label: 'ALERT:P99-SPIKE', title: 'ALERT: Synthetic Upstream p99 Latency > 900ms', status: 'failed', signal: 'crimson', host: 'edge-eu-central', model: 'watchdog', ms: 942, summary: 'Transient upstream stall caught; traffic shifted to healthy replica shard.', tokens: ['ALERT', '942MS', 'SHIFTED'] },
+  ];
+
+  const stage = document.getElementById('mx-stage');
+  const canvas = document.getElementById('mx-canvas');
+  const ctx = canvas.getContext('2d');
+  const hoverTip = document.getElementById('mx-hover-tip');
+  const drawer = document.getElementById('mx-drawer');
+  const guideModal = document.getElementById('mx-guide');
+
+  const speedModes = [
+    { label: '1.0x', mult: 1.0 },
+    { label: '0.15x BULLET', mult: 0.15 },
+    { label: '0.0x FREEZE', mult: 0.0 },
+  ];
+  let speedIdx = 0;
+  let decodePct = 60;
+  let activeFilter = 'ALL';
+  let searchQuery = '';
+  let hoveredCol = null;
+  let selectedStreamId = null;
+  let pulseWaves = [];
+  let neuralLinksUntil = 0;
+  let audioCtx = null;
+  let audioOn = false;
+  let masterGain = null;
+  let simCounter = 0;
+
+  let feed = structuredClone(SIM_SEED);
+  let fgCols = [];
+  let bgCols = [];
+  let midCols = [];
+  let width = 800;
+  let height = 580;
+  let dpr = 1;
+
+  function recomputeStats() {
+    const s = feed.streams;
+    feed.stats = {
+      totalStreams: s.length,
+      activeAgents: s.filter((x) => x.kind === 'AGENT' && /(run|work|start|queue)/i.test(x.status)).length,
+      totalAgents: s.filter((x) => x.kind === 'AGENT').length,
+      traces: s.filter((x) => x.kind === 'TRACE').length,
+      decisions: s.filter((x) => x.kind === 'DECISION').length,
+      alerts: s.filter((x) => x.signal === 'crimson').length,
+      edges: feed.edges.length,
+    };
+  }
+  recomputeStats();
+
+  function pickKata() {
+    return KATA[Math.floor(Math.random() * KATA.length)];
+  }
+
+  function filteredStreams() {
+    return feed.streams.filter((s) => {
+      if (activeFilter === 'ALERTS') return s.signal === 'crimson';
+      if (activeFilter !== 'ALL' && s.kind !== activeFilter) return false;
+      return true;
+    });
+  }
+
+  function matchesSearch(s) {
+    if (!searchQuery) return true;
+    return `${s.label} ${s.title} ${s.kind} ${s.host} ${s.model} ${s.status} ${s.summary}`.toLowerCase().includes(searchQuery);
+  }
+
+  function rebuildColumns(preserveY = true) {
+    const streams = filteredStreams();
+    const minSpacing = width < 520 ? 22 : 26;
+    const maxCols = Math.max(12, Math.floor((width - 28) / minSpacing));
+    const colCount = Math.max(streams.length > 0 ? Math.min(maxCols, Math.max(streams.length, 24)) : 20, 14);
+    const spacing = (width - 24) / colCount;
+    const prevByKey = new Map(fgCols.map((c) => [`${c.stream?.id || 'e'}:${c.slot}`, c]));
+
+    const nextFg = [];
+    for (let i = 0; i < colCount; i += 1) {
+      const stream = streams.length ? streams[i % streams.length] : null;
+      const key = `${stream?.id || 'e'}:${i}`;
+      const old = preserveY ? prevByKey.get(key) : null;
+      const len = 14 + Math.floor(Math.random() * 14);
+      const tokenText = stream ? [stream.label, ...(stream.tokens || []), stream.status.toUpperCase()].filter(Boolean).join(' · ') : '';
+      nextFg.push({
+        slot: i,
+        x: Math.round(12 + (i + 0.5) * spacing),
+        hitW: Math.max(18, spacing),
+        y: old ? old.y : (0.12 * height + Math.random() * height * 1.15),
+        speed: old ? old.speed : (stream?.signal === 'crimson' ? 115 : 58 + Math.random() * 68),
+        len,
+        fontSize: width < 520 ? 13 : 15,
+        chars: old?.chars || Array.from({ length: 34 }, () => pickKata()),
+        stream,
+        tokenText,
+      });
+    }
+    fgCols = nextFg;
+
+    const bgCount = Math.floor(width / 16);
+    if (bgCols.length !== bgCount) {
+      bgCols = Array.from({ length: bgCount }, (_, i) => ({
+        x: 8 + i * 16, y: Math.random() * height * 1.25, speed: 22 + Math.random() * 24, len: 10 + Math.floor(Math.random() * 12), chars: Array.from({ length: 24 }, () => pickKata()),
+      }));
+    }
+    const midCount = Math.floor(width / 24);
+    if (midCols.length !== midCount) {
+      midCols = Array.from({ length: midCount }, (_, i) => ({
+        x: 14 + i * 24, y: Math.random() * height * 1.25, speed: 40 + Math.random() * 34, len: 12 + Math.floor(Math.random() * 12), chars: Array.from({ length: 26 }, () => pickKata()),
+      }));
+    }
+  }
+
+  function resize() {
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    width = rect.width;
+    height = rect.height;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rebuildColumns(true);
+  }
+
+  function updateStats() {
+    document.getElementById('st-total').textContent = String(feed.stats.totalStreams);
+    document.getElementById('st-active').textContent = String(feed.stats.activeAgents);
+    document.getElementById('st-traces').textContent = String(feed.stats.traces);
+    document.getElementById('st-decisions').textContent = String(feed.stats.decisions);
+    document.getElementById('st-alerts').textContent = String(feed.stats.alerts);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+
+  function openInspector(stream) {
+    if (!stream) return;
+    selectedStreamId = stream.id;
+    const badge = document.getElementById('dr-kind');
+    badge.textContent = `${stream.kind} · ${stream.subkind || 'NODE'}`;
+    badge.className = `mx-badge sig-${stream.signal || 'emerald'}`;
+    document.getElementById('dr-title').textContent = stream.title;
+    document.getElementById('dr-status').textContent = String(stream.status).toUpperCase();
+    document.getElementById('dr-host').textContent = stream.host;
+    document.getElementById('dr-model').textContent = stream.model;
+    document.getElementById('dr-time').textContent = stream.timestamp;
+    document.getElementById('dr-dur').textContent = stream.durationMs != null ? `${stream.durationMs} ms` : 'streaming';
+    document.getElementById('dr-summary').textContent = stream.summary;
+
+    const spansEl = document.getElementById('dr-spans');
+    spansEl.innerHTML = '';
+    for (const sp of stream.spans || []) {
+      const row = document.createElement('div');
+      row.className = 'mx-span-row';
+      row.innerHTML = `<div class="mx-span-meta"><span>${escapeHtml(sp.name)}</span><span>${escapeHtml(sp.status)}</span></div><div class="mx-span-bar"><div class="mx-span-fill" style="width:${Math.round((sp.pct || 0.5) * 100)}%"></div></div>`;
+      spansEl.appendChild(row);
+    }
+
+    const refsEl = document.getElementById('dr-refs');
+    refsEl.innerHTML = '';
+    for (const r of stream.refs || []) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'mx-ref-chip';
+      chip.textContent = String(r);
+      chip.addEventListener('click', () => {
+        const inp = document.getElementById('inp-search');
+        inp.value = String(r);
+        searchQuery = String(r).toLowerCase();
+      });
+      refsEl.appendChild(chip);
+    }
+
+    document.getElementById('dr-raw').textContent = JSON.stringify(stream, null, 2);
+    drawer.classList.add('is-open');
+    drawer.setAttribute('aria-hidden', 'false');
+    playTick(stream.signal === 'crimson' ? 220 : 620);
+  }
+
+  function closeInspector() {
+    selectedStreamId = null;
+    drawer.classList.remove('is-open');
+    drawer.setAttribute('aria-hidden', 'true');
+  }
+
+  function firePulse(cx = width * 0.5, cy = height * 0.5) {
+    pulseWaves.push({ x: cx, y: cy, r: 8, maxR: Math.hypot(width, height) * 0.72, alpha: 0.92 });
+    neuralLinksUntil = performance.now() + 3600;
+    playTick(440);
+  }
+
+  function emitSimulatedEvent(withPulse = true) {
+    simCounter += 1;
+    const tpl = SIM_POOL[(simCounter - 1) % SIM_POOL.length];
+    const id = `sim:live-${simCounter}`;
+    const ev = {
+      id,
+      kind: tpl.kind,
+      subkind: tpl.subkind,
+      label: `${tpl.label}-${simCounter}`,
+      title: `${tpl.title} #${simCounter}`,
+      status: tpl.status,
+      signal: tpl.signal,
+      host: tpl.host,
+      model: tpl.model,
+      timestamp: nowIso(),
+      durationMs: tpl.ms != null ? Math.max(8, tpl.ms + ((simCounter * 17) % 45) - 20) : null,
+      summary: tpl.summary,
+      refs: ['sim:orch-01', 'sim:dep-qa'],
+      tokens: [...tpl.tokens, `EV-${simCounter}`],
+      spans: [{ name: tpl.label.toLowerCase(), status: tpl.status, pct: 0.88 }],
+    };
+    feed.streams.unshift(ev);
+    if (feed.streams.length > 42) feed.streams.pop();
+    feed.edges.unshift({ from: 'sim:orch-01', to: id, kind: 'emits' });
+    if (feed.edges.length > 36) feed.edges.pop();
+    recomputeStats();
+    updateStats();
+    rebuildColumns(true);
+    if (withPulse) firePulse(width * (0.2 + ((simCounter * 0.23) % 0.6)), height * 0.45);
+  }
+
+  function playTick(freq = 540) {
+    if (!audioOn || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.035, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.09);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.095);
+    } catch { /* ignore */ }
+  }
+
+  function toggleAudio() {
+    audioOn = !audioOn;
+    const btn = document.getElementById('btn-audio');
+    btn.textContent = audioOn ? 'AUDIO ON [M]' : 'AUDIO OFF [M]';
+    btn.classList.toggle('is-on', audioOn);
+    if (audioOn && !audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) {
+        audioCtx = new Ctx();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.25;
+        masterGain.connect(audioCtx.destination);
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioOn) playTick(520);
+  }
+
+  let lastTs = performance.now();
+  function renderStep(dt, now) {
+    ctx.fillStyle = speedIdx === 2 ? 'rgba(1, 4, 2, 0.04)' : 'rgba(1, 4, 2, 0.22)';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = 'center';
+    for (const c of bgCols) {
+      c.y += c.speed * dt;
+      if (c.y - c.len * 11 > height) c.y = -Math.random() * 140;
+      ctx.fillStyle = 'rgba(0, 120, 48, 0.22)';
+      for (let j = 0; j < c.len; j += 1) {
+        const gy = c.y - j * 11;
+        if (gy < -12 || gy > height + 12) continue;
+        if (Math.random() < 0.03 * speedModes[speedIdx].mult) c.chars[j % c.chars.length] = pickKata();
+        ctx.fillText(c.chars[j % c.chars.length], c.x, gy);
+      }
+    }
+
+    ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+    for (const c of midCols) {
+      c.y += c.speed * dt;
+      if (c.y - c.len * 13 > height) c.y = -Math.random() * 180;
+      for (let j = 0; j < c.len; j += 1) {
+        const gy = c.y - j * 13;
+        if (gy < -14 || gy > height + 14) continue;
+        const a = Math.max(0.04, 0.42 * (1 - j / c.len));
+        ctx.fillStyle = `rgba(0, 210, 88, ${a.toFixed(2)})`;
+        ctx.fillText(c.chars[j % c.chars.length], c.x, gy);
+      }
+    }
+
+    if ((now < neuralLinksUntil || selectedStreamId || hoveredCol) && feed.edges.length > 0) {
+      const colByStream = new Map();
+      for (const c of fgCols) {
+        if (c.stream && !colByStream.has(c.stream.id)) colByStream.set(c.stream.id, c);
+      }
+      const focusId = selectedStreamId || hoveredCol?.stream?.id || null;
+      ctx.save();
+      for (const edge of feed.edges) {
+        const a = colByStream.get(edge.from);
+        const b = colByStream.get(edge.to);
+        if (!a || !b) continue;
+        if (focusId && edge.from !== focusId && edge.to !== focusId && now >= neuralLinksUntil) continue;
+        const ay = Math.max(70, Math.min(height - 70, a.y));
+        const by = Math.max(70, Math.min(height - 70, b.y));
+        ctx.strokeStyle = edge.kind === 'verifies' ? 'rgba(255, 209, 102, 0.36)' : 'rgba(0, 229, 255, 0.28)';
+        ctx.lineWidth = focusId ? 1.4 : 0.9;
+        ctx.beginPath();
+        ctx.moveTo(a.x, ay);
+        ctx.quadraticCurveTo((a.x + b.x) / 2, Math.min(ay, by) - 48, b.x, by);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    const threshold = decodePct / 100;
+    for (const c of fgCols) {
+      const stream = c.stream;
+      const matched = !stream || matchesSearch(stream);
+      const isSelected = Boolean(stream && selectedStreamId === stream.id);
+      const isHovered = hoveredCol === c;
+
+      c.y += c.speed * dt;
+      const stepY = c.fontSize + 2;
+      if (c.y - c.len * stepY > height + 20) c.y = -Math.random() * 140;
+
+      if (isSelected || isHovered) {
+        const pal = COLORS[stream?.signal || 'emerald'];
+        ctx.fillStyle = isSelected ? 'rgba(0, 255, 102, 0.09)' : 'rgba(0, 255, 102, 0.04)';
+        ctx.fillRect(c.x - c.hitW / 2, 0, c.hitW, height);
+        ctx.strokeStyle = pal.main;
+        ctx.lineWidth = isSelected ? 1.3 : 0.7;
+        ctx.strokeRect(c.x - c.hitW / 2 + 1, 56, c.hitW - 2, height - 120);
+      }
+
+      const pal = COLORS[stream?.signal || 'emerald'];
+      const dimMult = matched ? 1.0 : 0.18;
+      ctx.font = `700 ${c.fontSize}px ${getComputedStyle(document.body).fontFamily}`;
+      const tok = c.tokenText;
+      const jitterX = stream?.signal === 'crimson' && Math.random() < 0.06 ? (Math.random() - 0.5) * 3 : 0;
+
+      for (let j = 0; j < c.len; j += 1) {
+        const gy = c.y - j * stepY;
+        if (gy < -20 || gy > height + 20) continue;
+        let ch;
+        const ratio = 1 - j / c.len;
+        const useToken = tok && j > 0 && j <= tok.length && Math.random() < threshold + (isHovered || isSelected ? 0.45 : 0.15);
+        if (useToken) {
+          ch = tok[j - 1];
+        } else {
+          if (j === 0 || (Math.random() < 0.05 * speedModes[speedIdx].mult)) c.chars[j % c.chars.length] = pickKata();
+          ch = c.chars[j % c.chars.length];
+        }
+        if (j === 0) {
+          ctx.shadowColor = pal.main;
+          ctx.shadowBlur = isHovered || isSelected ? 14 : 8;
+          ctx.fillStyle = pal.head;
+          ctx.globalAlpha = Math.min(1, 0.95 * dimMult);
+        } else if (j < 4) {
+          ctx.shadowBlur = useToken ? 5 : 0;
+          ctx.shadowColor = pal.main;
+          ctx.fillStyle = pal.main;
+          ctx.globalAlpha = Math.max(0.15, ratio * 0.95 * dimMult);
+        } else {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = ratio > 0.45 ? pal.mid : pal.tail;
+          ctx.globalAlpha = Math.max(0.08, ratio * 0.85 * dimMult);
+        }
+        ctx.fillText(ch, c.x + jitterX, gy);
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    for (let i = pulseWaves.length - 1; i >= 0; i -= 1) {
+      const w = pulseWaves[i];
+      w.r += 420 * Math.max(0.016, (dt || 0.016));
+      w.alpha *= 0.96;
+      ctx.save();
+      ctx.strokeStyle = `rgba(0, 255, 102, ${w.alpha.toFixed(2)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      if (w.r > w.maxR || w.alpha < 0.03) pulseWaves.splice(i, 1);
+    }
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastTs) / 1000)) * speedModes[speedIdx].mult;
+    lastTs = now;
+    renderStep(dt, now);
+    requestAnimationFrame(frame);
+  }
+
+  function colAt(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    let best = null;
+    let bestDist = Infinity;
+    for (const c of fgCols) {
+      if (!c.stream) continue;
+      const d = Math.abs(c.x - x);
+      if (d <= c.hitW * 0.65 && d < bestDist) {
+        best = c;
+        bestDist = d;
+      }
+    }
+    return best;
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const c = colAt(e.clientX);
+    hoveredCol = c;
+    if (!c || !c.stream) { hoverTip.style.display = 'none'; return; }
+    const rect = stage.getBoundingClientRect();
+    document.getElementById('ht-kind').textContent = `${c.stream.kind} · ${String(c.stream.status).toUpperCase()} · ${c.stream.model}`;
+    document.getElementById('ht-title').textContent = c.stream.title;
+    hoverTip.style.display = 'block';
+    hoverTip.style.left = `${Math.min(rect.width - 290, Math.max(12, e.clientX - rect.left + 14))}px`;
+    hoverTip.style.top = `${Math.min(rect.height - 90, Math.max(58, e.clientY - rect.top - 12))}px`;
+  });
+  canvas.addEventListener('mouseleave', () => { hoveredCol = null; hoverTip.style.display = 'none'; });
+  canvas.addEventListener('click', (e) => {
+    const c = colAt(e.clientX);
+    if (c && c.stream) {
+      openInspector(c.stream);
+      const rect = stage.getBoundingClientRect();
+      firePulse(c.x, e.clientY - rect.top);
+    }
+  });
+
+  function closeGuide() { guideModal.classList.remove('is-open'); }
+  function openGuide() { guideModal.classList.add('is-open'); }
+
+  document.getElementById('btn-guide').addEventListener('click', openGuide);
+  document.getElementById('btn-guide-x').addEventListener('click', closeGuide);
+  document.getElementById('btn-enter-matrix').addEventListener('click', () => { closeGuide(); firePulse(); });
+  guideModal.addEventListener('click', (e) => { if (e.target === guideModal) closeGuide(); });
+
+  document.getElementById('btn-copy-tpl').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-copy-tpl');
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(TEMPLATE_STARTER, null, 2));
+      btn.textContent = 'COPIED JSON!';
+      setTimeout(() => { btn.textContent = 'COPY JSON TEMPLATE'; }, 1800);
+    } catch {
+      btn.textContent = 'OPEN /api/schema';
+    }
+  });
+
+  document.getElementById('btn-speed').addEventListener('click', () => {
+    speedIdx = (speedIdx + 1) % speedModes.length;
+    document.getElementById('btn-speed').textContent = `SPEED ${speedModes[speedIdx].label} [Space]`;
+  });
+  document.getElementById('rng-decode').addEventListener('input', (e) => {
+    decodePct = Number(e.target.value);
+    document.getElementById('lbl-decode').textContent = `${decodePct}%`;
+  });
+  document.getElementById('btn-pulse').addEventListener('click', () => firePulse());
+  document.getElementById('btn-sim').addEventListener('click', () => emitSimulatedEvent(true));
+  document.getElementById('btn-audio').addEventListener('click', toggleAudio);
+  document.getElementById('btn-zen').addEventListener('click', () => stage.classList.toggle('is-zen'));
+  document.getElementById('btn-zen-exit').addEventListener('click', () => stage.classList.remove('is-zen'));
+  document.getElementById('dr-close').addEventListener('click', closeInspector);
+  document.getElementById('dr-raw-toggle').addEventListener('click', () => {
+    const el = document.getElementById('dr-raw');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('filter-group').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-filter]');
+    if (!btn) return;
+    activeFilter = btn.dataset.filter;
+    for (const b of document.querySelectorAll('#filter-group .mx-btn')) b.classList.toggle('is-on', b === btn);
+    rebuildColumns(false);
+  });
+
+  const inpSearch = document.getElementById('inp-search');
+  inpSearch.addEventListener('input', (e) => { searchQuery = e.target.value.trim().toLowerCase(); });
+  inpSearch.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const hit = filteredStreams().find(matchesSearch);
+      if (hit) openInspector(hit);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const inInput = document.activeElement === inpSearch;
+    if (e.key === 'Escape') {
+      closeGuide();
+      closeInspector();
+      if (inInput) inpSearch.blur();
+      return;
+    }
+    if (inInput) return;
+    if (e.key === '?') {
+      guideModal.classList.toggle('is-open');
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      document.getElementById('btn-speed').click();
+    } else if (e.key === '/') {
+      e.preventDefault();
+      inpSearch.focus();
+    } else if (e.key.toLowerCase() === 'p') {
+      firePulse();
+    } else if (e.key.toLowerCase() === 'h') {
+      stage.classList.toggle('is-zen');
+    } else if (e.key.toLowerCase() === 'm') {
+      toggleAudio();
+    }
+  });
+
+  window.addEventListener('resize', resize);
+  updateStats();
+  resize();
+  neuralLinksUntil = performance.now() + 2600;
+  renderStep(0.016, performance.now());
+  setInterval(() => emitSimulatedEvent(false), 3500);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
